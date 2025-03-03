@@ -1,6 +1,6 @@
 import pytest
 
-from afa4cate_clean.skeleton import fib, main
+from afa4cate.skeleton import fib, main
 
 __author__ = "“Julianna”"
 __copyright__ = "“Julianna”"

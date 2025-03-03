@@ -1,0 +1,9 @@
+pip
+wandb
+hydra-core
+numpy
+pandas
+scikit-learn
+seaborn
+optuna
+torch

@@ -1,0 +1,1 @@
+from afa4cate.gs_models.gaussian_model import GaussianGSM

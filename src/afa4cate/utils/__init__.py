@@ -1,0 +1,1 @@
+from afa4cate.utils.wandb import initialize_wandb

@@ -1,0 +1,22 @@
+cate_model:
+  _target_: cate_models.deep_kernel.DeepKernelGP
+  kernel: Matern32
+  num_inducing_points: 100
+  architecture: 'resnet'
+  dim_input: 60
+  dim_hidden: 256
+  dim_output: 1
+  depth: 4
+  negative_slope: -1.0
+  batch_norm: False
+  spectral_norm: 0.95
+  dropout_rate: 0.05
+  learning_rate: 0.001
+  batch_size: 256
+  epochs: 500
+  patience: 50
+  num_workers: 0
+  seed: ${random_seed}
+  device: ${device}
+
+model_name: deep_kernel_gp

@@ -1,0 +1,5 @@
+gs_model:
+  _target_: afa4cate.gs_models.gaussian_model.GaussianGSM
+  rho_cov: ${rho_cov}
+  d: ${d}
+  device: ${device}
