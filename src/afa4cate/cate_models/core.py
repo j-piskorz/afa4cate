@@ -3,11 +3,8 @@
 import os
 import copy
 import torch
-import logging
 
 from abc import ABC
-
-from ray import tune, train
 
 from ignite import utils
 from ignite import engine
@@ -109,7 +106,7 @@ class PyTorchModel(BaseModel):
         )
         return inputs, targets
 
-    def fit(self, train_dataset, tune_dataset):
+    def fit(self, train_dataset, tune_dataset, tune=False):
         train_loader = data.DataLoader(
             train_dataset,
             batch_size=self.batch_size,
@@ -132,15 +129,16 @@ class PyTorchModel(BaseModel):
             self.on_epoch_completed,
             train_loader,
             tune_loader,
+            tune,
         )
         self.trainer.add_event_handler(
-            engine.Events.COMPLETED, self.on_training_completed, tune_loader
+            engine.Events.COMPLETED, self.on_training_completed, tune_loader, tune
         )
         # Train
         self.trainer.run(train_loader, max_epochs=self.epochs)
         return self.evaluator.state.metrics
 
-    def on_epoch_completed(self, engine, train_loader, tune_loader):
+    def on_epoch_completed(self, engine, train_loader, tune_loader, tune):
         train_metrics = self.trainer.state.metrics
         print("Metrics Epoch", engine.state.epoch)
         justify = max(len(k) for k in train_metrics) + 2
@@ -151,8 +149,7 @@ class PyTorchModel(BaseModel):
             print("train {:<{justify}} {:<5}".format(k, v, justify=justify))
         self.evaluator.run(tune_loader)
         tune_metrics = self.evaluator.state.metrics
-        if train._internal.session._get_session():
-            train.report(dict(mean_loss=tune_metrics["loss"]))
+        
         justify = max(len(k) for k in tune_metrics) + 2
         for k, v in tune_metrics.items():
             if type(v) == float:
@@ -161,7 +158,7 @@ class PyTorchModel(BaseModel):
         if tune_metrics["loss"] < self.best_loss:
             self.best_loss = tune_metrics["loss"]
             self.counter = 0
-            self.update()
+            self.update(tune=tune)
         else:
             self.counter += 1
         if self.counter == self.patience:
@@ -170,10 +167,11 @@ class PyTorchModel(BaseModel):
             )
             engine.terminate()
 
-    def on_training_completed(self, engine, loader):
-        self.save()
-        self.load()
-        if not train._internal.session._get_session():
+    def on_training_completed(self, engine, loader, tune):
+        self.save(tune)
+        self.load(tune)
+
+        if not tune:
             self.evaluator.run(loader)
             metric_values = self.evaluator.state.metrics
             print("Metrics Epoch", engine.state.epoch)
@@ -183,8 +181,8 @@ class PyTorchModel(BaseModel):
                     print("best {:<{justify}} {:<5f}".format(k, v, justify=justify))
                     continue
 
-    def update(self):
-        if not train._internal.session._get_session():
+    def update(self, tune=False):
+        if not tune:
             self.best_state = {
                 "model": copy.deepcopy(self.network.state_dict()),
                 "optimizer": copy.deepcopy(self.optimizer.state_dict()),
@@ -195,22 +193,14 @@ class PyTorchModel(BaseModel):
                     self.likelihood.state_dict()
                 )
 
-    def save(self):
-        if not train._internal.session._get_session():
+    def save(self, tune=False):
+        if not tune:
             p = os.path.join(self.job_dir, "best_checkpoint.pt")
             torch.save(self.best_state, p)
 
-    def load(self):
-        if train._internal.session._get_session():
-            checkpoint = train.get_checkpoint()
-            if checkpoint:
-                with checkpoint.as_directory() as checkpoint_dir:
-                    p = os.path.join(checkpoint_dir, "checkpoint.pt")
-            else:
-                self.logger.info(
-                    "Checkpoint {} does not exist, starting a new engine"
-                )
-                return
+    def load(self, tune=False):
+        if tune:
+            return
         else:
             file_name = "best_checkpoint.pt"
             p = os.path.join(self.job_dir, file_name)
@@ -220,7 +210,7 @@ class PyTorchModel(BaseModel):
             )
             return
         self.logger.info("Loading saved checkpoint {}".format(p))
-        checkpoint = torch.load(p)
+        checkpoint = torch.load(p, weights_only=False)
         self.network.load_state_dict(checkpoint["model"])
         self.optimizer.load_state_dict(checkpoint["optimizer"])
         if self.likelihood is not None:

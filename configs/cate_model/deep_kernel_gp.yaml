@@ -13,7 +13,7 @@ cate_model:
   dropout_rate: 0.05
   learning_rate: 0.001
   batch_size: 256
-  epochs: 500
+  epochs: 300
   patience: 50
   num_workers: 0
   seed: ${random_seed}

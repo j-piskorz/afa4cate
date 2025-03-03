@@ -2,10 +2,10 @@ import numpy as np
 import logging
 from pathlib import Path
 
-from afa4cate.cate_models import DeepKernelGP, TARNet, Ensemble
+from afa4cate.cate_models import DeepKernelGP
 from afa4cate.cate_models.neural_network import NeuralNetwork
 
-def train_or_load_model(config, ds_train, ds_valid, experiment_dir, device=None):
+def train_or_load_model(config, ds_train, ds_valid, experiment_dir, device=None, tune=False):
     if device is None:
         device = config.cate_model.device
     if experiment_dir is not None:
@@ -35,20 +35,20 @@ def train_or_load_model(config, ds_train, ds_valid, experiment_dir, device=None)
                 weight_decay=(0.5 * (1 - config.cate_model.dropout_rate)) / len(ds_train),
                 learning_rate=config.cate_model.learning_rate,
                 batch_size=config.cate_model.batch_size,
-                epochs=config.cate_model.epochs,
+                epochs= config.cate_model.epochs if not tune else 75,
                 patience=config.cate_model.patience,
                 num_workers=config.cate_model.num_workers,
                 seed=config.cate_model.seed,
                 device=device,
             )
-        if experiment_dir is None:
-            _ = model.fit(ds_train, ds_valid)
+        if (experiment_dir is None) or tune:
+            _ = model.fit(ds_train, ds_valid, tune=tune)
         elif not (model_dir / "best_checkpoint.pt").exists():
             logging.info(f"Model does not yet exist. Training the model from the data.")
-            _ = model.fit(ds_train, ds_valid)
+            _ = model.fit(ds_train, ds_valid, tune=tune)
         else:
             logging.info(f"Model already exists. Loading the model parameters.")
-            model.load()
+            model.load(tune=tune)
     else:
         raise ValueError(f"Model name {config.model_name} not recognized.")
     

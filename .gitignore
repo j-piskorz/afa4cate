@@ -52,3 +52,16 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
+
+# Hydra output directories
+outputs/
+
+# Logs and debug files
+*.log
+logs/
+
+# saved models
+events.*
+experiments/tuning_files/
+experiments/tuning_files_pi/
+experiments/saved_files/

@@ -43,11 +43,12 @@ _BINARY_COVARIATES = [
 ]
 
 _TREATMENT = ["treat"]
-
+ROOT = Path(__file__).parent / "ihdp"
 
 class IHDP(data.Dataset):
-    def __init__(self, root, split, mode, seed):
-        root = Path(root)
+    def __init__(self, split, mode, seed):
+        root = ROOT
+        root.mkdir(parents=True, exist_ok=True)
         data_path = root / "ihdp.RData"
         # Download data if necessary
         if not data_path.exists():

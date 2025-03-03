@@ -4,7 +4,7 @@ wandb_log: False
 save_to_csv: False
 job_dir: null
 experiment_dir: null
-acquisition_metric: 'r_WPO'
+acquisition_metric: 'random'
 device: "cuda:0"
 
 rho_cov: 'acic2016'
@@ -12,11 +12,8 @@ d: 21
 
 tune_cate_model: True
 tune:
-  epochs: 1000
-  cpu_per_trial: 1.0
-  gpu_per_trial: 0.8
   max_samples: 100
-  time_budget_s: 600
+  time_budget_s: 1800
 
 pi_model:
   seed: ${random_seed}

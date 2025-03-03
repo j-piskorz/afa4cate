@@ -7,3 +7,8 @@ scikit-learn
 seaborn
 optuna
 torch
+gpytorch
+ignite
+tensorboard
+gdown
+pyreadr

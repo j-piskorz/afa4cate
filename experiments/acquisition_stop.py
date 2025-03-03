@@ -14,7 +14,7 @@ from afa4cate.utils.seed import set_seed_everywhere
 from afa4cate.workflows.utils import get_experiment_dir, get_tuning_dir
 from afa4cate.workflows.training_cate_models import train_or_load_model, train_or_load_pi_model
 from afa4cate.workflows.acquisition_metrics import ACQUISITION_METRICS
-from afa4cate.experiments.tuning_models import tuning
+from afa4cate.workflows.tuning_cate_models import tuning
 
 import logging
 
@@ -36,15 +36,6 @@ def train(config: DictConfig):
         logging.info(f"Wandb run ID: {run_id}")
 
     set_seed_everywhere(config.random_seed)
-
-    if config.dataset.dataset_name == "cmnist":
-        root = Path(__file__).parent.parent / "datasets" / "mnist"
-        root.mkdir(parents=True, exist_ok=True)
-        config.dataset.dataset.root = root
-    elif config.dataset.dataset_name == "ihdp" or config.dataset.dataset_name == "ihdp_cov":
-        root = Path(__file__).parent.parent / "datasets" / "ihdp"
-        root.mkdir(parents=True, exist_ok=True)
-        config.dataset.dataset.root = root
         
     # create the training dataset
     config.dataset.dataset.split = "train"
@@ -60,7 +51,7 @@ def train(config: DictConfig):
     hyper_dir = Path(__file__).parent / "tuning_files"
     best_param_dir = get_tuning_dir(config.dataset, hyper_dir)
     if not (best_param_dir / "best_hyperparameters.csv").exists():
-        tuning(config)
+        tuning(config, hyper_dir)
     params = pd.read_csv(best_param_dir / "best_hyperparameters.csv").to_dict(orient="records")[0]
     logging.info("Setting the best hyperparameters for the model.")
     config.cate_model.cate_model.kernel = params["kernel"]
@@ -120,64 +111,19 @@ def train(config: DictConfig):
 
     logging.info(f"Loss train: {model.calculate_loss(ds_train)}")
     logging.info(f"Loss valid: {model.calculate_loss(ds_valid)}")
-
-    if (config.acquisition_metric == "r_WPO_total"
-        or config.acquisition_metric == "r_WPO_mean"
-        or config.acquisition_metric == "r_WPO"
-        or config.acquisition_metric == "r_WPO_var"):
-        # get the propensity datasets
-        config.dataset.dataset.mode = "pi"
-        config.dataset.dataset.split = "train"
-        ds_pi_train = instantiate(config.dataset).dataset
-        config.dataset.dataset.split = "valid"
-        ds_pi_valid = instantiate(config.dataset).dataset
-        config.dataset.dataset.split = "test"
-        ds_pi_test = instantiate(config.dataset).dataset
-
-        # get the propensity model
-        pi_model = train_or_load_pi_model(config.pi_model, ds_pi_train, ds_pi_valid, experiment_dir)
-
-        # check the propensity model error
-        pi_pred_full = pi_model.predict_mean(ds_pi_test)
-        if config.dataset.dataset_name == "synthetic":
-            pi_rmse = np.sqrt(np.mean((pi_pred_full - ds_pi_test.pi)**2))
-            logging.info(f"Propensity model RMSE: {pi_rmse}")
-            if config.wandb_log:
-                wandb.log({"pi_rmse": pi_rmse})
-    else:
-        pi_model = None
-
     
     x_test = ds_test.x
     tau_test = ds_test.tau
     n, d = x_test.shape
 
     # select the initially observed variables
-    if config.dataset.dataset_name == "cmnist":
-        # Step 1: Create a mask for a single 8x8 image
-        single_mask = np.zeros((int(np.sqrt(d)), int(np.sqrt(d))), dtype=int)
-
-        # Set the border pixels to 1
-        single_mask[0, :] = 1          # Top row
-        single_mask[-1, :] = 1         # Bottom row
-        single_mask[:, 0] = 1          # Left column
-        single_mask[:, -1] = 1         # Right column
-
-        num_ones = np.sum(single_mask)
-
-        # Step 2: Flatten the mask to a 1D array of length 64
-        flattened_mask = single_mask.flatten()  # Shape: (64,)
-        z_test = np.tile(flattened_mask, (n, 1))  # Shape: (10000, 64)
-
-    elif config.dataset.dataset_name == "synthetic" or config.dataset.dataset_name == "ihdp" or config.dataset.dataset_name == "ihdp_cov":
-        # randomly initialize the z_test
-        num_ones = 3 if config.dataset.dataset_name == "synthetic" else 7
-        z_test = np.zeros((n, d), dtype=int)  # Initialize a matrix of zeros
-        # Generate the indices where the 1s will go
-        rows = np.repeat(np.arange(n), num_ones)  # Repeat row indices num_ones times
-        cols = np.array([np.random.choice(d, num_ones, replace=False) for _ in range(n)]).flatten()  # Randomly choose column indices
-        # Set the corresponding locations to 1
-        z_test[rows, cols] = 1
+    num_ones = 3 if config.dataset.dataset_name == "synthetic" else 7
+    z_test = np.zeros((n, d), dtype=int)  # Initialize a matrix of zeros
+    # Generate the indices where the 1s will go
+    rows = np.repeat(np.arange(n), num_ones)  # Repeat row indices num_ones times
+    cols = np.array([np.random.choice(d, num_ones, replace=False) for _ in range(n)]).flatten()  # Randomly choose column indices
+    # Set the corresponding locations to 1
+    z_test[rows, cols] = 1
     
     gsm = instantiate(config.gs_model).gs_model
     if config.dataset.dataset_name == "ihdp" or config.dataset.dataset_name == "ihdp_cov":
@@ -228,7 +174,7 @@ def train(config: DictConfig):
     stype_error_over_time = np.zeros((len(test_subset), (d - num_ones)))
     tau_var_over_time = np.zeros((len(test_subset), (d - num_ones)))
     if config.dataset.dataset_name == 'synthetic':
-        if config.dataset.dataset.setup_mu == 'A' and config.acquisition.track_predictive_acquisition:
+        if config.acquisition.track_predictive_acquisition:
             predictive_over_time = np.zeros((len(test_subset), (d - num_ones)))
             overlap_over_time = np.zeros((len(test_subset), (d - num_ones)))
 
@@ -244,7 +190,7 @@ def train(config: DictConfig):
         tau_var_per_step = []
         action = 'withhold'
         if config.dataset.dataset_name == 'synthetic':
-            if config.dataset.dataset.setup_mu == 'A' and config.acquisition.track_predictive_acquisition:
+            if config.acquisition.track_predictive_acquisition:
                 predictive_per_step = []
         
         # evaluating the model before the acquisition
@@ -267,19 +213,8 @@ def train(config: DictConfig):
                     samples_conditional_x = gsm.sample_conditional_covariates(samples_xj, z_new_j, n_samples=config.acquisition.n_cond_samples, seed=config.random_seed)
                     mu0_samples, mu1_samples = model.predict_mus_from_covariates(samples_conditional_x, posterior_sample=config.acquisition.n_posterior_samples,
                                                                                  batch_size=16384)
-                    if pi_model is not None:
-                        pi_samples = pi_model.predict_mean_from_covariates(samples_conditional_x, seed=config.random_seed)
-                        pi_samples = np.mean(pi_samples, axis=1)
-                    else:
-                        pi_samples = None
                     
-                    if (config.acquisition_metric == 'r_PO_plus_var'
-                        or config.acquisition_metric == 'r_TE_plus_var'
-                        or config.acquisition_metric == 'r_sTE_plus_var'
-                        or config.acquisition_metric == 'neg_r_TE_plus_var'):
-                        results.append(acquisition_metric(mu0_samples, mu1_samples, mu0_full_samples, mu1_full_samples, pi_samples, alpha=config.acquisition.alpha))
-                    else:
-                        results.append(acquisition_metric(mu0_samples, mu1_samples, pi_samples))
+                    results.append(acquisition_metric(mu0_samples, mu1_samples))
 
                 j_to_acquire = unobserved_indices[np.argmax(results)]
             
@@ -309,7 +244,7 @@ def train(config: DictConfig):
 
             # track the proportion of the predictive features acquired
             if config.dataset.dataset_name == 'synthetic':
-                if config.dataset.dataset.setup_mu == 'A' and config.acquisition.track_predictive_acquisition:
+                if config.acquisition.track_predictive_acquisition:
                     acquired = np.argwhere(z_test[i] == 1).flatten()
                     prop_predictive_acquired = len(set(acquired).intersection(set(ds_test.predictive)))/len(ds_test.predictive)
                     predictive_per_step.append(prop_predictive_acquired)
@@ -354,7 +289,7 @@ def train(config: DictConfig):
         stype_error_over_time[k, :total_number_steps] = stype_error_per_step
         tau_var_over_time[k, :total_number_steps] = tau_var_per_step
         if config.dataset.dataset_name == 'synthetic':
-            if config.dataset.dataset.setup_mu == 'A' and config.acquisition.track_predictive_acquisition:
+            if config.acquisition.track_predictive_acquisition:
                 predictive_over_time[k, :total_number_steps] = predictive_per_step
                 overlap_over_time[k, :total_number_steps] = overlap_per_step
         
@@ -384,7 +319,7 @@ def train(config: DictConfig):
 
     # track the acquisition of predictive features
     if config.dataset.dataset_name == 'synthetic':
-        if config.dataset.dataset.setup_mu == 'A' and config.acquisition.track_predictive_acquisition:
+        if config.acquisition.track_predictive_acquisition:
             predictive_over_time = np.mean(predictive_over_time, axis=0)
             overlap_over_time = np.mean(overlap_over_time, axis=0)
             logging.info(f"Final predictive acquisition: {predictive_over_time}")

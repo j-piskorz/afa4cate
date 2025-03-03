@@ -1,9 +1,9 @@
 dataset:
   _target_: afa4cate.datasets.IHDP
 
-  root: null
   split: null
   mode: 'mu'
   seed: ${random_seed}
 
+num_ones: 7
 dataset_name: ihdp
