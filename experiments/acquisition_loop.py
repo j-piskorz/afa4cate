@@ -78,9 +78,6 @@ def train(config: DictConfig):
     mu1_mean_full = mu1_pred_full.mean(axis=1)
     tau_pred_full = mu1_mean_full - mu0_mean_full
 
-    if config.wandb_log:
-        wandb.log({"pehe_full": np.sqrt(np.mean(tau_pred_full - ds_test.tau)**2)})
-
     pehe, pehe_percentage, mu_0_mse, mu_1_mse, y_mse = model.compute_pehe(ds_train, seed=config.random_seed)
 
     logging.info(f"PEHE: {pehe}")
@@ -91,6 +88,15 @@ def train(config: DictConfig):
 
     logging.info(f"Loss train: {model.calculate_loss(ds_train)}")
     logging.info(f"Loss valid: {model.calculate_loss(ds_valid)}")
+
+    if config.wandb_log:
+        wandb.log({"PEHE": np.sqrt(np.mean(tau_pred_full - ds_test.tau)**2)})
+        wandb.log({"PEHE_percentage": pehe_percentage})
+        wandb.log({"Mu_0_RMSE": mu_0_mse})
+        wandb.log({"Mu_1_RMSE": mu_1_mse})
+        wandb.log({"Y_MSE": y_mse})
+        wandb.log({"Loss_train": model.calculate_loss(ds_train)})
+        wandb.log({"Loss_valid": model.calculate_loss(ds_valid)})
 
     x_test = ds_test.x
     tau_test = ds_test.tau

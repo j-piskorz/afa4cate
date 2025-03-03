@@ -5,7 +5,7 @@ def get_experiment_dir(config, job_dir):
         return (
             Path(job_dir)
             / config.dataset_name
-            / f"ns-{config.dataset.n_samples}_sm-{config.dataset.setup_mu}_sp-{config.dataset.setup_pi}_d-{config.dataset.d}_rcov-{config.dataset.rho_cov}_rte-{config.dataset.rho_TE}_l-{config.dataset.lambd}_s-{config.dataset.seed}"
+            / f"ns-{config.dataset.n_samples}_sp-{config.dataset.setup_pi}_rte-{config.dataset.rho_TE}_s-{config.dataset.seed}"
         )
     elif config.dataset_name == "ihdp":
         return (
@@ -20,10 +20,11 @@ def get_tuning_dir(config, job_dir):
         return (
             Path(job_dir)
             / config.dataset_name
-            / f"ns-{config.dataset.n_samples}_sm-{config.dataset.setup_mu}_sp-{config.dataset.setup_pi}_d-{config.dataset.d}_rcov-{config.dataset.rho_cov}_rte-{config.dataset.rho_TE}_l-{config.dataset.lambd}"
+            / f"ns-{config.dataset.n_samples}_sp-{config.dataset.setup_pi}_rte-{config.dataset.rho_TE}_s-{config.dataset.seed}"
         )
     elif config.dataset_name == "ihdp":
         return (
             Path(job_dir)
             / config.dataset_name
+            / f"s-{config.dataset.seed}"
         )

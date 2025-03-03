@@ -126,7 +126,7 @@ def train(config: DictConfig):
     z_test[rows, cols] = 1
     
     gsm = instantiate(config.gs_model).gs_model
-    if config.dataset.dataset_name == "ihdp" or config.dataset.dataset_name == "ihdp_cov":
+    if config.dataset.dataset_name == "ihdp":
         gsm.define_mean_sigma(mu=ds_train.mean, Sigma=ds_train.cov)
     acquisition_metric = ACQUISITION_METRICS[config.acquisition_metric]
 

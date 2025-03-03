@@ -2,13 +2,8 @@ dataset:
   _target_: afa4cate.datasets.synthetic.SyntheticCATEDataset
 
   n_samples: 10000        # Number of samples
-  setup_mu: A             # 'A' for setup A, 'B' for setup B
   setup_pi: overlap_violation   # 'random' for random treatment assignment
-  d: ${d}                 # Number of covariates
-  sigma_y: 1.0            # Noise in outcome generation
-  rho_cov: ${rho_cov}     # Correlation between covariates
   rho_TE: 0.7             # probability of non-zero treatment effect
-  lambd: 1.0              # treatment effect strength
   seed: ${random_seed}    # Random seed
   mode: 'mu'              # 'mu' for potential outcome prediction, 'pi' for propensity score prediction
   split: null             # 'train' for training set, 'test' for test set, 'valid' for validation set

@@ -1,5 +1,5 @@
 random_seed: 1
-experiment_name: fixed_acic2016
+experiment_name: test_run
 wandb_log: False
 save_to_csv: False
 job_dir: null
@@ -7,41 +7,10 @@ experiment_dir: null
 acquisition_metric: 'random'
 device: "cuda:0"
 
-rho_cov: 'acic2016'
-d: 21
-
 tune_cate_model: True
 tune:
-  max_samples: 100
-  time_budget_s: 1800
-
-pi_model:
-  seed: ${random_seed}
-  dim_hidden: 128
-  dim_output: 1
-  depth: 3
-  negative_slope: -100.0
-  spectral_norm: 3.0
-  dropout_rate: 0.5
-  learning_rate: 0.001
-  batch_size: 1000
-  epochs: 500
-  patience: 50
-  device: ${device}
-
-var_model:
-  seed: ${random_seed}
-  dim_hidden: 128
-  dim_output: 1
-  depth: 3
-  negative_slope: 1.0
-  spectral_norm: 3.0
-  dropout_rate: 0.5
-  learning_rate: 0.001
-  batch_size: 1000
-  epochs: 500
-  patience: 50
-  device: ${device}
+  max_samples: 20
+  time_budget_s: 600
 
 acquisition:
   subsample: "random"
@@ -58,5 +27,5 @@ acquisition:
 
 defaults:
 - cate_model: deep_kernel_gp
-- dataset: ihdp
+- dataset: acic2016
 - gs_model: gaussian_gsm

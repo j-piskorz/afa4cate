@@ -62,6 +62,5 @@ logs/
 
 # saved models
 events.*
-experiments/tuning_files/
-experiments/tuning_files_pi/
+# experiments/tuning_files/
 experiments/saved_files/

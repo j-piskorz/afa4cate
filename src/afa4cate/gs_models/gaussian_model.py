@@ -5,7 +5,7 @@ from afa4cate.datasets.load_acic2016 import load
 from ignite import distributed
 
 class GaussianGSM:
-    def __init__(self, d, rho_cov, device=None):
+    def __init__(self, device=None):
         """
         Initialize the Gaussian Structural Generative Model.
         
@@ -18,23 +18,19 @@ class GaussianGSM:
         else:
             self.device = torch.device(device)
 
-        if isinstance(rho_cov, str) and rho_cov == 'acic2016':
-            # Load the mean and covariance from the ACIC 2016 dataset
-            path = Path(__file__).parent.parent / "datasets" / "acic2016"
-            path.mkdir(parents=True, exist_ok=True)
-            acic = load(path, preprocessed=True, original_acic_outcomes=True)
+        # Load the mean and covariance from the ACIC 2016 dataset
+        path = Path(__file__).parent.parent / "datasets" / "acic2016"
+        path.mkdir(parents=True, exist_ok=True)
+        acic = load(path, preprocessed=True, original_acic_outcomes=True)
 
-            # Remove binary variables
-            binary = [1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                           19, 26, 27, 28, 29, 34, 35, 36, 37, 38, 42,
-                           43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
-            acic = np.delete(acic, binary, axis=1)
-            
-            self.mu = torch.tensor(np.mean(acic, axis=0), dtype=torch.float32).to(self.device)
-            self.Sigma = torch.tensor(np.cov(acic, rowvar=False), dtype=torch.float32).to(self.device)
-        else:
-            self.mu = torch.zeros(d).to(self.device)  # Mean vector
-            self.Sigma = (rho_cov * torch.ones((d, d)) + (1 - rho_cov) * torch.eye(d)).to(self.device)  # Covariance matrix
+        # Remove binary variables
+        binary = [1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                        19, 26, 27, 28, 29, 34, 35, 36, 37, 38, 42,
+                        43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
+        acic = np.delete(acic, binary, axis=1)
+        
+        self.mu = torch.tensor(np.mean(acic, axis=0), dtype=torch.float32).to(self.device)
+        self.Sigma = torch.tensor(np.cov(acic, rowvar=False), dtype=torch.float32).to(self.device)
     
     def define_mean_sigma(self, mu, Sigma):
         """

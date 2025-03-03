@@ -15,9 +15,7 @@ class SyntheticCATEDataset(data.Dataset):
         self,
         n_samples,
         setup_pi='random',  # 'random' for random treatment assignment
-        d=60,               # Number of covariates
         sigma_y=1.0,        # Noise in outcome generation
-        rho_cov=0.3,        # Correlation between covariates (if set to 'acic2016' then the covariate structure is based on the ACIC 2016 dataset)
         rho_TE=0.5,         # probability of non-zero treatment effect
         lambd=1.0,          # treatment effect strength
         seed=1331,          # Random seed
@@ -27,34 +25,27 @@ class SyntheticCATEDataset(data.Dataset):
         super(SyntheticCATEDataset, self).__init__()
         rng = np.random.RandomState(seed=seed)
         self.n_samples = n_samples
-        self.d = d
-        self.dim_input = d
         self.dim_treatment = 1
         self.dim_output = 1
 
         self.setup_pi = setup_pi
 
         # Step 1: Generate Covariates (multivariate normal with correlations)
-        if isinstance(rho_cov, str) and rho_cov == 'acic2016':
-            self.acic = True
-            path = Path(__file__).parent / "acic2016"
-            path.mkdir(parents=True, exist_ok=True)
-            acic = load(path, preprocessed=True, original_acic_outcomes=True)
+        self.acic = True
+        path = Path(__file__).parent / "acic2016"
+        path.mkdir(parents=True, exist_ok=True)
+        acic = load(path, preprocessed=True, original_acic_outcomes=True)
 
-            # Remove binary variables
-            binary = [1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                           19, 26, 27, 28, 29, 34, 35, 36, 37, 38, 42,
-                           43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
-            acic = np.delete(acic, binary, axis=1)
-            
-            self.mean = np.mean(acic, axis=0)
-            self.cov = np.cov(acic, rowvar=False)
-            self.d = acic.shape[1]
-            self.dim_input = self.d
-        else:
-            self.acic = False
-            self.mean = (np.random.rand(d) - 0.5)*4
-            self.cov = rho_cov * np.ones((d, d)) + (1 - rho_cov) * np.eye(d)  # Correlated covariance matrix
+        # Remove binary variables
+        binary = [1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                        19, 26, 27, 28, 29, 34, 35, 36, 37, 38, 42,
+                        43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
+        acic = np.delete(acic, binary, axis=1)
+        
+        self.mean = np.mean(acic, axis=0)
+        self.cov = np.cov(acic, rowvar=False)
+        self.d = acic.shape[1]
+        self.dim_input = self.d
         x = rng.multivariate_normal(self.mean, self.cov, size=n_samples).astype('float32')
 
         # Step 2: Assign treatments
@@ -70,7 +61,7 @@ class SyntheticCATEDataset(data.Dataset):
         y = t * y1 + (1 - t) * y0 + (sigma_y * rng.standard_normal(n_samples).astype('float32'))
 
         # create a dataframe
-        xs = [f"x{i}" for i in range(d)]
+        xs = [f"x{i}" for i in range(self.d)]
         df_x = pd.DataFrame({xs[i]: x[:, i] for i in range(self.d)})
         df_else = pd.DataFrame({"y0": y0, "y1": y1, "tau": tau, "y": y, "t": t, "pi": pi})
         df = pd.concat([df_x, df_else], axis=1)

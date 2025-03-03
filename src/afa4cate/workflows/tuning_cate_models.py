@@ -52,11 +52,10 @@ def tuning(config: DictConfig, hyper_dir):
 
         # Update config with sampled parameters
         config.cate_model.cate_model.update(params)
-        config.cate_model.cate_model.seed = 0  # Fix seed for tuning
 
         # Train and evaluate the model
         try:
-            model = train_or_load_model(config.cate_model, ds_train, ds_valid, None, device="cuda:0", tune=True)
+            model = train_or_load_model(config.cate_model, ds_train, ds_valid, None, device=config.device, tune=True)
             loss = model.calculate_loss(ds_valid)
         except Exception as e:
             logging.error(f"Error during training: {e}")
