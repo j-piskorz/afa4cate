@@ -9,4 +9,4 @@ dataset:
   split: null             # 'train' for training set, 'test' for test set, 'valid' for validation set
 
 num_ones: 3
-dataset_name: synthetic
+dataset_name: acic2016
