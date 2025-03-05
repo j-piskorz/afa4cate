@@ -1,0 +1,2 @@
+dim_hidden,depth,negative_slope,dropout_rate,spectral_norm,learning_rate,batch_size,kernel,num_inducing_points
+128,3,0.1,0.1,3.0,0.001,256,Matern52,500
