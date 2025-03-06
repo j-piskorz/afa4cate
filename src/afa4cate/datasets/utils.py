@@ -26,13 +26,6 @@ def assign_treatment(X, setup, rng):
         linear_terms[linear_terms < 0] *= 1.4
         linear_terms[linear_terms > 0] *= 4.4
         return 1/(1+np.exp(-linear_terms)), None
-    elif setup == 'confounding_imbalance_2':
-        beta_j = rng.binomial(1, 0.7, size=d).astype('float32')
-        linear_terms = np.dot(X, beta_j)
-        range_vals = np.max(linear_terms) - np.min(linear_terms)
-        linear_terms /= range_vals
-        linear_terms = -(np.log(linear_terms + 0.7) + 1.6)
-        return 1/(1+np.exp(-linear_terms)), None
     elif setup == 'overlap_violation':
         overlap_vars = rng.choice(d, size=4, replace=False)
         beta_j = rng.binomial(1, 0.4, size=d).astype('float32')

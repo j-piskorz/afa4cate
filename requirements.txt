@@ -12,3 +12,4 @@ ignite
 tensorboard
 gdown
 pyreadr
+ipykernel

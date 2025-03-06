@@ -122,14 +122,14 @@ def train(config: DictConfig):
     if config.acquisition.subsample == 'random':
         test_subset = np.random.choice(ds_test.x.shape[0], config.acquisition.n_test_samples, replace=False)
     elif config.acquisition.subsample == 'good_propensity':
-        if config.dataset.dataset_name != "synthetic":
-            raise ValueError("This subsample method is only available for the synthetic dataset.")
-        propensities = np.abs(ds_test.pi - 0.5) # only possible in the synthetic dataset
+        if config.dataset.dataset_name != "acic2016":
+            raise ValueError("This subsample method is only available for the acic2016 dataset.")
+        propensities = np.abs(ds_test.pi - 0.5) # only possible in the acic2016 dataset
         test_subset = np.argsort(propensities)[:config.acquisition.n_test_samples]
     elif config.acquisition.subsample == 'bad_propensity':
-        if config.dataset.dataset_name != "synthetic":
-            raise ValueError("This subsample method is only available for the synthetic dataset.")
-        propensities = np.abs(ds_test.pi - 0.5) # only possible in the synthetic dataset
+        if config.dataset.dataset_name != "acic2016":
+            raise ValueError("This subsample method is only available for the acic2016 dataset.")
+        propensities = np.abs(ds_test.pi - 0.5) # only possible in the acic2016 dataset
         test_subset = np.argsort(propensities)[-config.acquisition.n_test_samples:]
     elif config.acquisition.subsample == 'bad_initial_estimate':
         # first select a subsample of the test set, to avoid using the entire test set
@@ -158,7 +158,7 @@ def train(config: DictConfig):
     score_over_time = np.zeros((len(test_subset), (d - num_ones)))
     stype_error_over_time = np.zeros((len(test_subset), (d - num_ones)))
     tau_var_over_time = np.zeros((len(test_subset), (d - num_ones)))
-    if config.dataset.dataset_name == 'synthetic':
+    if config.dataset.dataset_name == 'acic2016':
         if config.acquisition.track_predictive_acquisition:
             predictive_over_time = np.zeros((len(test_subset), (d - num_ones)))
     time_per_individual = []
@@ -172,7 +172,7 @@ def train(config: DictConfig):
         score_per_step = []
         stype_error_per_step = []
         tau_var_per_step = []
-        if config.dataset.dataset_name == 'synthetic':
+        if config.dataset.dataset_name == 'acic2016':
             if config.acquisition.track_predictive_acquisition:
                 predictive_per_step = []
         
@@ -217,7 +217,7 @@ def train(config: DictConfig):
             tau_pred_var = (mu1_full_samples - mu0_full_samples).var(1).mean() + (mu1_full_samples - mu0_full_samples).mean(1).var()
             score = (tau_pred - tau_test[i])**2
             stype_error = int((tau_test[i] > 0) != (tau_pred > 0))
-            if config.dataset.dataset_name == 'synthetic':
+            if config.dataset.dataset_name == 'acic2016':
                 logging.info(f"Acquiring feature {j_to_acquire}. Was this feature predictive? {"Yes." if np.isin(j_to_acquire, ds_test.predictive) else "No."} New score: {score}.")
             else:
                 logging.info(f"Acquiring feature {j_to_acquire}. New score: {score}.")
@@ -226,7 +226,7 @@ def train(config: DictConfig):
             tau_var_per_step.append(tau_pred_var)
 
             # track the proportion of the predictive features acquired
-            if config.dataset.dataset_name == 'synthetic':
+            if config.dataset.dataset_name == 'acic2016':
                 if config.acquisition.track_predictive_acquisition:
                     acquired = np.argwhere(z_test[i] == 1).flatten()
                     prop_predictive_acquired = len(set(acquired).intersection(set(ds_test.predictive)))/len(ds_test.predictive)
@@ -239,7 +239,7 @@ def train(config: DictConfig):
         score_over_time[k, :total_number_steps] = score_per_step
         stype_error_over_time[k, :total_number_steps] = stype_error_per_step
         tau_var_over_time[k, :total_number_steps] = tau_var_per_step
-        if config.dataset.dataset_name == 'synthetic':
+        if config.dataset.dataset_name == 'acic2016':
             if config.acquisition.track_predictive_acquisition:
                 predictive_over_time[k, :total_number_steps] = predictive_per_step
         
@@ -261,8 +261,8 @@ def train(config: DictConfig):
                        "tau_var": tau_var_over_time[timestep]})
 
     # track the acquisition of predictive features
-    if config.dataset.dataset_name == 'synthetic':        
-        if config.dataset.dataset.setup_mu == 'A' and config.acquisition.track_predictive_acquisition:
+    if config.dataset.dataset_name == 'acic2016':        
+        if config.acquisition.track_predictive_acquisition:
             predictive_over_time = np.mean(predictive_over_time, axis=0)
             logging.info(f"Final predictive acquisition: {predictive_over_time}")
             if config.wandb_log:

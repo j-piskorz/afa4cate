@@ -117,7 +117,7 @@ def train(config: DictConfig):
     n, d = x_test.shape
 
     # select the initially observed variables
-    num_ones = 3 if config.dataset.dataset_name == "synthetic" else 7
+    num_ones = 3 if config.dataset.dataset_name == "acic2016" else 7
     z_test = np.zeros((n, d), dtype=int)  # Initialize a matrix of zeros
     # Generate the indices where the 1s will go
     rows = np.repeat(np.arange(n), num_ones)  # Repeat row indices num_ones times
@@ -134,9 +134,13 @@ def train(config: DictConfig):
     if config.acquisition.subsample == 'random':
         test_subset = np.random.choice(ds_test.x.shape[0], config.acquisition.n_test_samples, replace=False)
     elif config.acquisition.subsample == 'good_propensity':
+        if config.dataset.dataset_name != "acic2016":
+            raise ValueError("This subsample method is only available for the acic2016 dataset.")
         propensities = np.abs(ds_test.pi - 0.5)
         test_subset = np.argsort(propensities)[:config.acquisition.n_test_samples]
     elif config.acquisition.subsample == 'bad_propensity':
+        if config.dataset.dataset_name != "acic2016":
+            raise ValueError("This subsample method is only available for the acic2016 dataset.")
         propensities = np.abs(ds_test.pi - 0.5)
         test_subset = np.argsort(propensities)[-config.acquisition.n_test_samples:]
     elif config.acquisition.subsample == 'bad_variance':
@@ -173,9 +177,10 @@ def train(config: DictConfig):
     score_list = []
     stype_error_over_time = np.zeros((len(test_subset), (d - num_ones)))
     tau_var_over_time = np.zeros((len(test_subset), (d - num_ones)))
-    if config.dataset.dataset_name == 'synthetic':
+    if config.dataset.dataset_name == 'acic2016':
         if config.acquisition.track_predictive_acquisition:
             predictive_over_time = np.zeros((len(test_subset), (d - num_ones)))
+        if config.dataset.dataset.setup_pi == 'overlap_violation':
             overlap_over_time = np.zeros((len(test_subset), (d - num_ones)))
 
     for k in range(len(test_subset)):
@@ -189,7 +194,7 @@ def train(config: DictConfig):
         overlap_per_step = []
         tau_var_per_step = []
         action = 'withhold'
-        if config.dataset.dataset_name == 'synthetic':
+        if config.dataset.dataset_name == 'acic2016':
             if config.acquisition.track_predictive_acquisition:
                 predictive_per_step = []
         
@@ -234,8 +239,10 @@ def train(config: DictConfig):
             tau_pred_var = (mu1_full_samples - mu0_full_samples).var(1).mean() + (mu1_full_samples - mu0_full_samples).mean(1).var()
             pehe = (tau_pred - tau_test[i])**2
             stype_error = int((tau_test[i] > 0) != (tau_pred > 0))
-            if config.dataset.dataset_name == 'synthetic':
+            if config.dataset.dataset_name == 'acic2016' and config.dataset.dataset.setup_pi == 'overlap_violation':
                 logging.info(f"Acquiring feature {j_to_acquire}. Was this feature predictive? {"Yes." if np.isin(j_to_acquire, ds_test.predictive) else "No."} Was this feature related to overlap? {"Yes." if np.isin(j_to_acquire, ds_test.overlap) else "No."} New pehe: {pehe}.")
+            elif config._dataset.dataset_name == 'acic2016':
+                logging.info(f"Acquiring feature {j_to_acquire}. Was this feature predictive? {"Yes." if np.isin(j_to_acquire, ds_test.predictive) else "No."} New pehe: {pehe}.")
             else:
                 logging.info(f"Acquiring feature {j_to_acquire}. New pehe: {pehe}.")
             pehe_per_step.append(pehe)
@@ -243,11 +250,12 @@ def train(config: DictConfig):
             tau_var_per_step.append(tau_pred_var)
 
             # track the proportion of the predictive features acquired
-            if config.dataset.dataset_name == 'synthetic':
+            if config.dataset.dataset_name == 'acic2016':
                 if config.acquisition.track_predictive_acquisition:
                     acquired = np.argwhere(z_test[i] == 1).flatten()
                     prop_predictive_acquired = len(set(acquired).intersection(set(ds_test.predictive)))/len(ds_test.predictive)
                     predictive_per_step.append(prop_predictive_acquired)
+                if config.dataset.dataset.setup_pi == 'overlap_violation':
                     prop_overlap_acquired = len(set(acquired).intersection(set(ds_test.overlap)))/len(ds_test.overlap)
                     overlap_per_step.append(prop_overlap_acquired)
 
@@ -288,9 +296,10 @@ def train(config: DictConfig):
         pehe_over_time[k, :total_number_steps] = pehe_per_step
         stype_error_over_time[k, :total_number_steps] = stype_error_per_step
         tau_var_over_time[k, :total_number_steps] = tau_var_per_step
-        if config.dataset.dataset_name == 'synthetic':
+        if config.dataset.dataset_name == 'acic2016':
             if config.acquisition.track_predictive_acquisition:
                 predictive_over_time[k, :total_number_steps] = predictive_per_step
+            if config.dataset.dataset.setup_pi == 'overlap_violation':
                 overlap_over_time[k, :total_number_steps] = overlap_per_step
         
         # decision making metrics
@@ -318,15 +327,19 @@ def train(config: DictConfig):
                        "tau_var": tau_var_over_time[timestep]})
 
     # track the acquisition of predictive features
-    if config.dataset.dataset_name == 'synthetic':
+    if config.dataset.dataset_name == 'acic2016':
         if config.acquisition.track_predictive_acquisition:
             predictive_over_time = np.mean(predictive_over_time, axis=0)
-            overlap_over_time = np.mean(overlap_over_time, axis=0)
             logging.info(f"Final predictive acquisition: {predictive_over_time}")
-            logging.info(f"Final overlap acquisition: {overlap_over_time}")
             if config.wandb_log:
                 for timestep, pred in enumerate(predictive_over_time):
-                    wandb.log({"timestep": timestep, "predictive_acquisition": pred, "overlap_acquisition": overlap_over_time[timestep]})
+                    wandb.log({"timestep": timestep, "predictive_acquisition": pred})
+        if config.dataset.dataset.setup_pi == 'overlap_violation':
+            overlap_over_time = np.mean(overlap_over_time, axis=0)
+            logging.info(f"Final overlap acquisition: {overlap_over_time}")
+            if config.wandb_log:
+                for timestep, overlap in enumerate(overlap_over_time):
+                    wandb.log({"timestep": timestep, "overlap_acquisition": overlap_over_time[timestep]})
     
     # track decision making actions
     if config.wandb_log:
