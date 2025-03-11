@@ -1,11 +1,10 @@
 random_seed: 1
 experiment_name: test_run
 wandb_log: False
-save_to_csv: False
 job_dir: null
 experiment_dir: null
 acquisition_metric: 'random'
-device: "cuda:0"
+device: "cpu"
 
 tune_cate_model: True
 tune:

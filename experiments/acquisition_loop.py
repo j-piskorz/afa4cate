@@ -274,18 +274,6 @@ def train(config: DictConfig):
     if config.wandb_log:
         wandb.log({"time_per_individual": np.mean(time_per_individual), "var_time_per_individual": np.var(time_per_individual)})
     
-    # save the results to a csv file
-    if config.save_to_csv:
-        scores_dict = {f"t{i}": score for i, score in enumerate(score_over_time)}
-        scores_dict['acquisition_metric'] = config.acquisition_metric
-        if (experiment_dir / "results.csv").exists():
-            results_df = pd.read_csv(experiment_dir / "results.csv", index_col=False)
-            new_df = pd.DataFrame([scores_dict])
-            results_df = pd.concat([results_df, new_df], ignore_index=True)
-        else:
-            results_df = pd.DataFrame([scores_dict])
-        results_df.to_csv(experiment_dir / "results.csv", index=False)
-    
     print("yaaay!")
 
 if __name__ == "__main__":

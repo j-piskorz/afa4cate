@@ -353,18 +353,6 @@ def train(config: DictConfig):
                    "pehe_for_predict": np.sqrt(np.mean(np.array(pehe_final)[np.array(actions_list) == 'predict'])),
                    "pehe_for_withhold": np.sqrt(np.mean(np.array(pehe_final)[np.array(actions_list) == 'withhold'])),
                    "total_score_per_cost": np.sum(np.array(score_list))/np.sum(np.array(number_acquisitions_list))})
-
-    # save the results
-    if config.save_to_csv:
-        pehes_dict = {f"t{i}": pehe for i, pehe in enumerate(pehe_over_time)}
-        pehes_dict['acquisition_metric'] = config.acquisition_metric
-        if (experiment_dir / "results.csv").exists():
-            results_df = pd.read_csv(experiment_dir / "results.csv", index_col=False)
-            new_df = pd.DataFrame([pehes_dict])
-            results_df = pd.concat([results_df, new_df], ignore_index=True)
-        else:
-            results_df = pd.DataFrame([pehes_dict])
-        results_df.to_csv(experiment_dir / "results.csv", index=False)
     
     print("yaaay!")
 
