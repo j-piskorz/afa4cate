@@ -1,4 +1,4 @@
-experiment_name='acic2016_acquisition'
+experiment_name='acic2016_acquisition_loop'
 acquisition_list=("random" "r_PO" "r_TE" "r_sTE")
 seed_list=(1 2 3 4 5 6 7 8 9 10)
 device="cuda:2"
