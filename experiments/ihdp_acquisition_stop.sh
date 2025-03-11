@@ -2,9 +2,9 @@ experiment_name="ihdp_acquisition_stop"
 acquisition_list=("random" "r_PO" "r_TE" "r_sTE")
 var_threshold=(0.99 0.95 0.90 0.85 0.80 0.75 0.70)
 seed_list=(1 2 3 4 5 6 7 8 9 10)
-threshold_variable='sTE'
+threshold_variable='TE'
 subsample='random'
-device="cuda:3"
+device="cpu"
 alpha=1.0
 
 

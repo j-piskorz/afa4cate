@@ -5,7 +5,7 @@ acquisition='r_TE'
 seed_list=(1 2 3 4 5 6 7 8 9 10)
 subsample='random'
 n_test_samples=10
-device="cuda:0"
+device="cpu"
 num_ones_list=(0 2 4 6 8 10 12 14 16 18)
 
 for seed in "${seed_list[@]}"; do
